@@ -1,0 +1,12 @@
+{
+  "id": "someshbsaini/murmur-pipeline-run-1",
+  "title": "Murmur Pipeline Run 1",
+  "code_file": "unified_murmur_pipeline.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": true,
+  "enable_gpu": true,
+  "enable_internet": true,
+  "dataset_sources": ["someshbsaini/mumurdetection"],
+  "kernel_sources": []
+}

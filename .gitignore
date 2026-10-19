@@ -1,0 +1,21 @@
+# Data (downloaded from Zenodo; see data/README.md)
+data/*
+!data/README.md
+
+# Training outputs and local environments
+results_reproduced/
+*.part
+checkpoints/
+outputs/
+mlruns/
+mlflow.db
+*.safetensors
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+
+# Credentials (never commit)
+kaggle.json
+gcs-key.json
+*service-account*.json

@@ -1,0 +1,47 @@
+{
+  "00b_dryrun_audioset_zeroshot_stdpreproc": {
+    "status": "SUCCESS",
+    "best_cal_score": 0.42556175605651436,
+    "physionet22_val": {
+      "auc": 0.662004662004662,
+      "auc_ci": [
+        0.5377035521168174,
+        0.7736188567445101
+      ],
+      "auc_pr": 0.4514431124784603,
+      "brier": 0.12940678210972972,
+      "cal_score": 0.42556175605651436,
+      "sens": 0.09090909090909091,
+      "spec": 1.0,
+      "acc": 0.8412698412698413,
+      "mcc": 0.27612738783186724
+    },
+    "WC2023": {
+      "auc": 0.8461844197138315,
+      "auc_ci": [
+        0.7477797098569158,
+        0.9362798974719688
+      ],
+      "n_patients": 108
+    },
+    "WVU": {
+      "auc": 0.5555555555555555,
+      "auc_ci": [
+        0.40810249307479224,
+        0.7000223214285713
+      ],
+      "n_patients": 76
+    },
+    "OHH-2025": {
+      "auc": 0.4676077363833945,
+      "auc_ci": [
+        0.36099650748533396,
+        0.577949477212849
+      ],
+      "n_patients": 1152
+    },
+    "name": "00b_dryrun_audioset_zeroshot_stdpreproc",
+    "split_integrity": "N/A (no training/eval split \u2014 zero-shot)",
+    "wall_time_seconds": 851.6
+  }
+}
