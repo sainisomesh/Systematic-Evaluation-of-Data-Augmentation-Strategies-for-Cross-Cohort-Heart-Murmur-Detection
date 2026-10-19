@@ -36,8 +36,9 @@ run stops, start the command again and it continues from the last finished exper
 - `unified_murmur_pipeline.py`: data loading, preprocessing, augmentation, training and evaluation
 - `reproduce.py`, `run.sh`, `run.bat`: setup, data download and the full run
 - `results/`: outputs of the original runs used in the paper
-- `analysis/`: scripts that produce the paper's tables from `results/` (run from this folder with
-  `.venv`, for example `.venv/bin/python analysis/results_stats.py`)
+- `analysis/`: scripts that regenerate `results/prod_results.md` and the statistics reported in the
+  paper from `results/` (run from this folder with `.venv`, for example
+  `.venv/bin/python analysis/results_stats.py`)
 - `tests/`: unit tests, run automatically by `reproduce.py`
 
 ## Citation
