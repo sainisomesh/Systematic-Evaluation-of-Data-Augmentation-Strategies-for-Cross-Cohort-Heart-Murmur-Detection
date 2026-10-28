@@ -96,6 +96,37 @@ fine-tuned models did.
   runs hit the platform time limit. Reruns of the same configuration on the same hardware still gave
   identical results.
 
+## Smaller choices inside the augmentations
+
+A few decisions are easy to miss in the code but changed how the experiments behave.
+
+**Every recording is its own training example.** We did not build patient-level training samples.
+Each recording gets its own label and goes through the model on its own, and the patient score is only
+assembled at evaluation time. That kept the training loop simple and gave the model about three
+times as many examples as there are patients (2,524 recordings from 753 patients).
+
+**Short or broken recordings are replaced, not dropped.** If a recording is shorter than 0.1 s after
+trimming, or fails to decode, the pipeline substitutes a second of silence. Dropping it would shrink the
+batch and, worse, shift the predictions out of line with the list of recording IDs used to build patient
+scores. One silent input is a smaller problem than one misaligned patient.
+
+**Noise comes from a held-out part of ICBHI.** The respiratory noise files are split 80/20 with a fixed
+seed and only the 80% is used for training augmentation. After mixing, the waveform is normalized again
+in the same order as every other recording, so the noise level changes the signal-to-noise ratio and
+not the loudness the model sees.
+
+**Two random-number sources, on purpose.** HPSS-EQ and a few older augmentations draw from Python's
+global `random`, exactly as in the first version of the pipeline. The augmentations we added later
+(cardiac-cycle crop and respiratory modulation) use a seeded generator. We could have moved HPSS-EQ over
+too, but that would change which random draws each training sample gets and so move results that we
+had already reported. A cleaner design was not worth losing the link to earlier numbers.
+
+**SpecAugment kept in two versions.** The standard version masks anywhere in the 128 Mel bins. Since
+our band-pass filter leaves almost nothing above 1,200 Hz, about 60% of the frequency axis is nearly
+empty, and an unconstrained mask often lands there and does nothing. The cardiac-constrained version
+masks only the first 52 bins, which is the part that carries heart sounds. We ran both so that we
+could see whether the extra constraint mattered.
+
 ## Choosing augmentations without testing every combination
 
 We started from the kinds of variation we expected between clinics and devices, and picked
@@ -136,6 +167,46 @@ compute several times over, so we used the near-repeat runs (configurations that
 change the preprocessing removes) to estimate how much results vary between runs, and we read single
 differences of a few points with that in mind.
 
+## What went wrong and what we changed
+
+We made mistakes along the way. These are the ones that shaped the final code.
+
+**An OHH-2025 result that looked too low.** At one point the OHH-2025 AUROC fell to about 0.63 when an
+older version of the pipeline had given 0.85 to 0.89. We spent several rounds chasing causes in
+preprocessing and in the augmentation code, and several of our early explanations were wrong. The
+cause turned out to be how scores were computed for the external cohorts, not the data or the model.
+The lesson we took was to diff against the last version known to be good before theorizing. After the
+fix, the same configuration reproduced the earlier value (0.875), and we used that run as the
+reference whenever we touched the evaluation code afterwards.
+
+**A loss that quietly ignored its weights.** Our first version of the quality-weighted focal loss ran
+without error, and its results matched the plain focal-loss run to the last digit. That identical match
+was the clue: the focal-loss trainer was not using the per-sample weights, so the "combined"
+experiment was just focal loss again. We fixed the trainer, reran that one experiment, and updated
+every table. We now look for exact duplicates in the results table as a basic check.
+
+**Noise that silently turned itself off.** Two separate problems made the noise experiments run without
+noise and without any warning. Pointing the script at the wrong folder gave zero noise files, and a
+newer torchaudio release stopped decoding the WAV files without an extra library. We moved audio
+loading to `soundfile`, which gave identical samples for all 174 files, and made the script exit with
+an error when a noise experiment finds no noise. A failed noise mix now raises an error instead of
+being logged and skipped.
+
+**A run that looked frozen for twelve hours.** Hugging Face's `full_determinism` setting forces
+synchronous CUDA calls, which made each step ten to fifty times slower and only on the GPU, so nothing
+showed up when we tested locally on a Mac. Anything that depends on whether a GPU is present is
+invisible to local testing, so since then we compare the GPU-only code paths against a known-good
+version first.
+
+**Runs overwriting each other's logs.** With no tracking server configured, all experiments shared one
+default MLflow run, and the second experiment failed when it tried to change a logged parameter. Each
+experiment now opens and closes its own run.
+
+**Gain jitter that did almost nothing.** Gain jitter was applied before the steps that normalize
+level, so the normalization removed it, as described above. We kept it exactly as it was run, reported
+it as a near-repeat of the baseline and used it that way, instead of changing the code and invalidating
+runs that were already finished.
+
 ## Evaluation
 
 - **Per patient, as in the PhysioNet 2022 Challenge.** The model scores each recording, and the scores
@@ -162,6 +233,24 @@ Recordings whose annotations did not line up with the heart sounds were excluded
 then checked that the maps reflect the models: removing the regions with the highest attribution
 lowered the score more than removing random regions, and re-initializing the classifier or the
 transformer layers removed the pattern, as it should if the maps depend on what the network learned.
+
+## Keeping the results stable
+
+Because the numbers in the paper come from a research pipeline where small changes can move results,
+we tried to keep each change minimal and to be explicit when one could affect the numbers.
+
+- **Row order matters.** The database queries have no `ORDER BY`, so the physical row order sets the
+  order of the training recordings. A re-built or trimmed database has to keep the original row order,
+  or results shift.
+- **Determinism where the hardware allows it.** Deterministic algorithms are on, as warnings only,
+  except on Apple GPUs, where one PyTorch version gave NaN gradients with them. Mixed precision is used
+  only when a CUDA GPU is available.
+- **Pinned versions for the release.** The release pins every package to the tested set and checks the
+  Python version, because a newer `transformers` release renamed the layer list of the AST model and
+  broke the progressive-unfreezing callback at epoch 4 of one experiment. The callback now handles both names, and
+  a test covers it.
+- **Only the best checkpoint is kept,** and the trained model of each experiment is saved separately
+  after evaluation, so later analyses (such as the attribution figure) need no retraining.
 
 ## Reproducibility
 
