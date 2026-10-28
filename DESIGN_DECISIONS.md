@@ -90,11 +90,6 @@ fine-tuned models did.
 - **Loss variants as Trainer subclasses.** Focal loss, quality-weighted cross-entropy and mixup are
   implemented as small subclasses of the Hugging Face `Trainer`, chosen from the experiment's settings.
   Adding a new loss means adding a subclass rather than branching inside the training loop.
-- **Reproducibility over speed where it mattered.** Random seeds are set once for Python, NumPy and
-  PyTorch, and augmentations that we added later draw from a seeded generator. We switched off Hugging
-  Face's `full_determinism` on GPUs: it forces synchronous CUDA calls, which made training so slow that
-  runs hit the platform time limit. Reruns of the same configuration on the same hardware still gave
-  identical results.
 
 ## Smaller choices inside the augmentations
 
@@ -114,12 +109,6 @@ scores. One silent input is a smaller problem than one misaligned patient.
 seed and only the 80% is used for training augmentation. After mixing, the waveform is normalized again
 in the same order as every other recording, so the noise level changes the signal-to-noise ratio and
 not the loudness the model sees.
-
-**Two random-number sources, on purpose.** HPSS-EQ and a few older augmentations draw from Python's
-global `random`, exactly as in the first version of the pipeline. The augmentations we added later
-(cardiac-cycle crop and respiratory modulation) use a seeded generator. We could have moved HPSS-EQ over
-too, but that would change which random draws each training sample gets and so move results that we
-had already reported. A cleaner design was not worth losing the link to earlier numbers.
 
 **SpecAugment kept in two versions.** The standard version masks anywhere in the 128 Mel bins. Since
 our band-pass filter leaves almost nothing above 1,200 Hz, about 60% of the frequency axis is nearly
@@ -191,12 +180,6 @@ newer torchaudio release stopped decoding the WAV files without an extra library
 loading to `soundfile`, which gave identical samples for all 174 files, and made the script exit with
 an error when a noise experiment finds no noise. A failed noise mix now raises an error instead of
 being logged and skipped.
-
-**A run that looked frozen for twelve hours.** Hugging Face's `full_determinism` setting forces
-synchronous CUDA calls, which made each step ten to fifty times slower and only on the GPU, so nothing
-showed up when we tested locally on a Mac. Anything that depends on whether a GPU is present is
-invisible to local testing, so since then we compare the GPU-only code paths against a known-good
-version first.
 
 **Runs overwriting each other's logs.** With no tracking server configured, all experiments shared one
 default MLflow run, and the second experiment failed when it tried to change a logged parameter. Each
