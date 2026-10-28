@@ -61,6 +61,7 @@ Text is set with LaTeX if it is installed and with Matplotlib's Computer Modern 
 
 ## Repository contents
 
+- `DESIGN_DECISIONS.md`: why the pipeline, model, training and experiments are set up the way they are
 - `unified_murmur_pipeline.py`: data loading, preprocessing, augmentation, training and evaluation
 - `reproduce.py`, `run.sh`, `run.bat`: setup, data download and the full run
 - `results/`: outputs of the original runs used in the paper
