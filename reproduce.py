@@ -1,8 +1,10 @@
 """Reproduce all experiments in the paper.
 
 Usage:
-    python reproduce.py          set up, download the data, run all 82 experiments, compare with the paper
-    python reproduce.py --check  set up, download and verify the data, run the unit tests (no training)
+    python reproduce.py            set up, download the data, run all 82 experiments, compare with the paper
+    python reproduce.py --check    set up, download and verify the data, run the unit tests (no training)
+    python reproduce.py --figures  after the full run: reproduce the attribution figure from the
+                                   trained models (figures/attribution.py)
 
 Running the command again resumes: verified downloads and finished experiments are kept.
 Only the Python standard library is needed to start; everything else is installed into .venv.
@@ -46,6 +48,8 @@ COHORTS = {  # project_name: (recordings, patients, patients with a murmur)
     "OHH-2025": (5382, 1151, 41),
 }
 TORCH_VERSION = "2.10.0"
+FIGURE_EXPERIMENTS = ["01_prod_processing_trainer_frozen", "02_prod_processing_trainer_unfrozen",
+                      "23_prod_cspec_ultra_light", "29_prod_noisemixed_focal", "39_prod_hpss_focal"]
 MIN_FREE_GB = 60
 SSL_CONTEXT = None
 
@@ -304,12 +308,29 @@ def run_tests(py):
     run([py, os.path.join(ROOT, "tests", "test_metrics_and_augmentation.py")], cwd=ROOT)
 
 
+def make_figures(py):
+    missing = [e for e in FIGURE_EXPERIMENTS
+               if not os.path.exists(os.path.join(RUN_DIR, e, "best_model", "config.json"))]
+    if missing:
+        fail("--figures uses the models trained by the full run, which are not there yet: "
+             + ", ".join(missing) + ". Run ./run.sh (run.bat on Windows) first, then ./run.sh --figures.")
+    log("Installing the figure dependencies (figures/requirements.txt)")
+    run([py, "-m", "pip", "install", "-r", os.path.join(ROOT, "figures", "requirements.txt")])
+    run([py, os.path.join(ROOT, "tests", "test_attribution_helpers.py")], cwd=ROOT)
+    out = os.path.join(RUN_DIR, "figures", "attribution")
+    log(f"Reproducing the attribution figure (outputs in {out}); this takes several hours on a CPU")
+    run([py, os.path.join(ROOT, "figures", "attribution.py"), "all"], cwd=ROOT)
+    log(f"Figure written: {os.path.join(out, 'Fig_attribution_left_ABC.pdf')} and Fig_attribution_right_DEF.pdf")
+
+
 def main():
     for stream in (sys.stdout, sys.stderr):
         stream.reconfigure(errors="replace")
     parser = argparse.ArgumentParser(description="Reproduce the experiments in the paper.")
     parser.add_argument("--check", action="store_true",
                         help="set up, download and verify the data, and run the unit tests without training")
+    parser.add_argument("--figures", action="store_true",
+                        help="after the full run, reproduce the attribution figure from the trained models")
     args = parser.parse_args()
 
     check_system()
@@ -322,6 +343,9 @@ def main():
     run_tests(py)
     if args.check:
         log("Check complete.")
+        return
+    if args.figures:
+        make_figures(py)
         return
     code = run_experiments(py)
     compare_with_paper()
