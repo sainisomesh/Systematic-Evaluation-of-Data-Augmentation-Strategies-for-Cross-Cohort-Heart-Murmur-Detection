@@ -76,10 +76,24 @@ def test_reinit_changes_loaded_weights():
     assert changed(m.classifier) and changed(layers[1]) and changed(layers[2])
     assert not changed(layers[0])  # below the re-initialized block
 
+def test_predict_runs_without_gradients():
+    """predict() must run under torch.no_grad() (it returns NumPy logits for whole cohorts)."""
+    import torch
+    from transformers import ASTConfig, ASTForAudioClassification
+
+    cfg = ASTConfig(num_hidden_layers=1, hidden_size=32, num_attention_heads=2, intermediate_size=64, num_labels=2)
+    model = ASTForAudioClassification(cfg).eval()
+    collator = lambda items: {"input_values": torch.randn(len(items), A.MAX_LEN, 128)}
+    records = [(f"u{i}", 0, "p", b"") for i in range(5)]
+    out = A.predict(model, collator, records, batch=2)
+    assert out.shape == (5, 2) and out.dtype.kind == "f"
+
+
 if __name__ == "__main__":
     test_valid_frame_count_matches_feature_extractor()
     test_mel_centers()
     test_silence_baseline_keeps_padding()
     test_warp_area_average()
     test_reinit_changes_loaded_weights()
+    test_predict_runs_without_gradients()
     print("attribution helper tests passed")

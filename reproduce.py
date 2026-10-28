@@ -3,8 +3,8 @@
 Usage:
     python reproduce.py            set up, download the data, run all 82 experiments, compare with the paper
     python reproduce.py --check    set up, download and verify the data, run the unit tests (no training)
-    python reproduce.py --figures  after the full run: reproduce the attribution figure from the
-                                   trained models (figures/attribution.py)
+    python reproduce.py --figures  after the full run: reproduce the training-curve figure and the
+                                   attribution figure (figures/training_curves.py, figures/attribution.py)
 
 Running the command again resumes: verified downloads and finished experiments are kept.
 Only the Python standard library is needed to start; everything else is installed into .venv.
@@ -317,6 +317,9 @@ def make_figures(py):
     log("Installing the figure dependencies (figures/requirements.txt)")
     run([py, "-m", "pip", "install", "-r", os.path.join(ROOT, "figures", "requirements.txt")])
     run([py, os.path.join(ROOT, "tests", "test_attribution_helpers.py")], cwd=ROOT)
+    run([py, os.path.join(ROOT, "tests", "test_training_curves.py")], cwd=ROOT)
+    log("Reproducing the training-curve figure from the MLflow log of the full run")
+    run([py, os.path.join(ROOT, "figures", "training_curves.py")], cwd=ROOT)
     out = os.path.join(RUN_DIR, "figures", "attribution")
     log(f"Reproducing the attribution figure (outputs in {out}); this takes several hours on a CPU")
     run([py, os.path.join(ROOT, "figures", "attribution.py"), "all"], cwd=ROOT)
@@ -330,7 +333,7 @@ def main():
     parser.add_argument("--check", action="store_true",
                         help="set up, download and verify the data, and run the unit tests without training")
     parser.add_argument("--figures", action="store_true",
-                        help="after the full run, reproduce the attribution figure from the trained models")
+                        help="after the full run, reproduce the training-curve and attribution figures")
     args = parser.parse_args()
 
     check_system()

@@ -254,6 +254,7 @@ def item(rec):
     return {"rel_path": rec[0], "label": rec[1], "audio_bytes": rec[3], "is_train": False}
 
 
+@torch.no_grad()
 def predict(model, collator, records, batch=8):
     out = []
     for i in range(0, len(records), batch):

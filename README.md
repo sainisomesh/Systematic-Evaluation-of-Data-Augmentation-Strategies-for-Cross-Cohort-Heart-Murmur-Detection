@@ -31,7 +31,7 @@ run stops, start the command again and it continues from the last finished exper
 
 `./run.sh --check` sets everything up and verifies the data without training.
 
-## Reproducing the attribution figure
+## Reproducing the training-curve and attribution figures
 
 After the full run has finished, run:
 
@@ -39,17 +39,25 @@ After the full run has finished, run:
 ./run.sh --figures        # Windows: run.bat --figures
 ```
 
-This uses the trained models in `results_reproduced/<experiment>/best_model/` of five configurations
-(frozen backbone, full fine-tuning, HPSS-EQ with focal loss, cardiac SpecAugment (5, 48), and mixed
-noise with focal loss), so it stops with a message if `./run.sh` has not been run first. It installs
-`figures/requirements.txt` (Captum and Matplotlib), downloads the CirCor labels and heart-cycle
-segmentation files it needs from PhysioNet (checked against PhysioNet's SHA-256 checksums), and runs
-`figures/attribution.py`: Integrated Gradients for each validation patient with a systolic murmur,
-alignment to S1, systole, S2 and diastole, and the averaged maps. The two halves of the figure
-(`Fig_attribution_left_ABC.pdf`, `Fig_attribution_right_DEF.pdf`), the per-patient results and the
-numbers quoted in the paper (`paper_numbers.json`) are written to `results_reproduced/figures/attribution/`.
-It runs on an NVIDIA GPU if one is available and otherwise on the CPU (several hours). Text is set with
-LaTeX if it is installed and with Matplotlib's Computer Modern fonts otherwise.
+It needs the outputs of the full run, so it stops with a message if `./run.sh` has not been run
+first. It installs `figures/requirements.txt` (Captum and Matplotlib), then:
+
+1. draws the training curves (training loss, and validation AUROC and AUPRC per epoch) of six
+   configurations from the MLflow log of the full run (`results_reproduced/mlflow.db`), checks that
+   the selected epoch of each gives the validation AUROC the run reported, and writes the figure to
+   `results_reproduced/figures/training_curves/`;
+2. makes the attribution figure from the trained models in `results_reproduced/<experiment>/best_model/`
+   of five configurations (frozen backbone, full fine-tuning, HPSS-EQ with focal loss, cardiac
+   SpecAugment (5, 48), and mixed noise with focal loss): it downloads the CirCor labels and heart-cycle
+   segmentation files it needs from PhysioNet (checked against PhysioNet's SHA-256 checksums) and runs
+   `figures/attribution.py`, which computes Integrated Gradients for each validation patient with a
+   systolic murmur, aligns them to S1, systole, S2 and diastole, and averages them. The two halves of the
+   figure (`Fig_attribution_left_ABC.pdf`, `Fig_attribution_right_DEF.pdf`), the per-patient results and
+   the numbers quoted in the paper (`paper_numbers.json`) are written to
+   `results_reproduced/figures/attribution/`. This step runs on an NVIDIA GPU if one is available and
+   otherwise on the CPU (several hours).
+
+Text is set with LaTeX if it is installed and with Matplotlib's Computer Modern fonts otherwise.
 
 ## Repository contents
 
@@ -59,7 +67,7 @@ LaTeX if it is installed and with Matplotlib's Computer Modern fonts otherwise.
 - `analysis/`: scripts that regenerate `results/prod_results.md` and the statistics reported in the
   paper from `results/` (run from this folder with `.venv`, for example
   `.venv/bin/python analysis/results_stats.py`)
-- `figures/`: `attribution.py` and its requirements, used by `./run.sh --figures`
+- `figures/`: `training_curves.py`, `attribution.py` and their requirements, used by `./run.sh --figures`
 - `tests/`: unit tests, run automatically by `reproduce.py`
 
 ## Citation
